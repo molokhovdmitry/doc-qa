@@ -2,7 +2,14 @@ from bs4 import BeautifulSoup
 import re
 
 def bf_parser(doc_path: str) -> dict:
-    """"""
+    """
+    Parses an HTML document and returns a dictionary with the title of the document as the key
+    and the cleaned text as the value.
+
+    Args:
+        doc_path (str): The path to the HTML document.
+    Returns:
+        dict: A dictionary with the title of the document as the key and the cleaned text as the value. """
 
     parser_dict = {}
 
