@@ -15,7 +15,7 @@ def get_text_messages(message):
     elif message.text == "/help":
         bot.send_message(message.from_user.id, "Напиши любой запрос к базе данных документов ПЭК.")
     else:
-        bot.send_message(message.from_user.id, message.text)
+        bot.send_message(message.from_user.id, message.text) # добавить функцию обработки запроса к langchain
 
 # Запускаем бота
 bot.polling(none_stop=True, interval=0)
