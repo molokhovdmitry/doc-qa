@@ -1,1 +1,11 @@
 tqdm
+chardet
+numpy
+
+# LangChain
+langchain
+langchain_community
+chromadb
+beautifulsoup4
+torch
+sentence_transformers
