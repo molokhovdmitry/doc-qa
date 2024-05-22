@@ -2,7 +2,7 @@
 
 Assuming we are starting the app from the project root directory with:
 ```
-python -m src.bot.main.py
+python -m src.bot.main
 ```
 We can use the class like this:
 ```
@@ -19,7 +19,7 @@ for file in data:
 Where `file` is a `Dict`:
 ```
 {
-    'path': 'path to file',
+    'source': 'path to file',
     'name': 'actual file name without extension',
     'full_html_name': 'full file name',
     'department': 'department name',

@@ -73,7 +73,7 @@ class DataLoader():
         # Fill `files`
         for html, url in self.html_to_url.items():
             data = {
-                'path': os.path.join(
+                'source': os.path.join(
                     self.extract_dir, self.html_to_file[html]),
                 'name': html.split('/')[-1][:-5],
                 'full_html_name': html,
@@ -116,3 +116,6 @@ class DataLoader():
 
     def __getitem__(self, index: int) -> dict:
         return self.files[index]
+
+    def __len__(self) -> int:
+        return len(self.files)
