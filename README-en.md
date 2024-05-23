@@ -8,6 +8,7 @@ To use the project with PEC data, download all the files in a `zip` file, rename
 
 ## Other data
 <details>
+
 To use the bot on different data `Retriever` object should receive the object with `__getitem__` and `__len__` methods that yields a dictionaries with the following keys:
 
 ```
