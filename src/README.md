@@ -1,8 +1,36 @@
+# `bot`
+
+# `retriever`
+
+`Retriever` class usage example:
+```
+from src.data_loader import DataLoader
+from src.retriever import Retriever
+
+# Initialize dataset and retriever
+dataset = DataLoader()
+retriever = Retriever(dataset)
+
+# Answer the question
+question = 'Question to the documents'
+answer = retriever.answer(question)
+```
+`answer` will be a `dict`:
+```
+{
+    'text': 'Answer to the question from documents.',
+    'url': 'url',
+    'department': 'department'
+}
+```
+
+# `data_loader`
+
 `DataLoader` class takes path to `.zip` file as an input, extracts the files with changed file names, matches `.html` file names to names in `.txt` files and creates an iterable object.
 
 Assuming we are starting the app from the project root directory with:
 ```
-python -m src.bot.main
+python -m src.bot
 ```
 We can use the class like this:
 ```

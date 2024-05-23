@@ -15,7 +15,7 @@ from langchain.retrievers.document_compressors import (
 )
 from langchain.retrievers import ContextualCompressionRetriever
 
-from src.data.data_loader import DataLoader
+from src.data_loader import DataLoader
 
 
 class Retriever():

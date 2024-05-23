@@ -1,6 +1,7 @@
 tqdm
 chardet
 numpy
+telebot
 
 # LangChain
 langchain

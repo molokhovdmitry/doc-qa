@@ -1,1 +1,0 @@
-# Telegram bot for doc-qa project
