@@ -24,7 +24,7 @@ class Retriever():
             dataset: DataLoader,
             embedding_model: str = 'cointegrated/LaBSE-en-ru',
             vectorstore_dir: str = 'chroma',
-            similarity_threshold: float = 0.4,
+            similarity_threshold: float = 0.25,
             retriever_search_type: str = 'mmr'
             ) -> None:
         self.dataset = dataset
@@ -41,12 +41,22 @@ class Retriever():
 
     def answer(self, question: str) -> dict:
         compressed_docs = self.retriever.invoke(question)
+        if len(compressed_docs) == 0:
+            return None
         doc = compressed_docs[0]
         text = doc.page_content
         url = doc.metadata['url']
+        full_html_name = doc.metadata['full_html_name']
         department = doc.metadata['department']
 
-        return {'text': text, 'url': url, 'department': department}
+        answer = {
+            'text': text,
+            'url': url,
+            'full_html_name': full_html_name,
+            'department': department
+        }
+
+        return answer
 
     def get_wiki_content(self, file: dict) -> str:
         with open(file['source'], 'r') as f:

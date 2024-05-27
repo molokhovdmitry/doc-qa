@@ -1,17 +1,15 @@
-tqdm~=4.66.4
-chardet~=5.2.0
+tqdm
+chardet
 numpy
-telebot~=0.0.5
+telebot
+nltk
+pandas
+python-dotenv
 
 # LangChain
-langchain~=0.2.1
+langchain
 langchain_community
 chromadb
-beautifulsoup4~=4.12.3
+beautifulsoup4
 torch
 sentence_transformers
-
-python-dotenv~=1.0.1
-bs4~=0.0.2
-pandas~=2.2.2
-nltk~=3.8.1
