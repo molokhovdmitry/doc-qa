@@ -15,9 +15,10 @@ from langchain.retrievers.document_compressors import (
 )
 from langchain.retrievers import ContextualCompressionRetriever
 
-from data_loader import DataLoader
+from src.data_loader import DataLoader
 
 import time
+
 
 class Retriever():
     def __init__(
@@ -42,16 +43,23 @@ class Retriever():
 
     def answer(self, question: str) -> dict:
         """
-        This Python function takes a question as input, retrieves relevant documents, extracts specific
-        information from the top document, and returns a dictionary containing the text, URL, and
+        This Python function takes a question as input, retrieves relevant
+        documents, extracts specific
+        information from the top document, and returns a dictionary containing
+        the text, URL, and
         department of the document.
 
-        :param question: The `answer` function takes a question as input and returns a dictionary
-        containing information related to the question. The information includes the text content of a
-        document, the URL of the document, and the department to which the document belongs
+        :param question: The `answer` function takes a question as input and
+        returns a dictionary
+        containing information related to the question. The information
+        includes the text content of a
+        document, the URL of the document, and the department to which the
+        document belongs
         :type question: str
-        :return: The function `answer` takes a question as input and returns a dictionary containing the
-        text, URL, and department information related to the retrieved document.
+        :return: The function `answer` takes a question as input and returns a
+        dictionary containing the
+        text, URL, and department information related to the retrieved
+        document.
         """
         compressed_docs = self.retriever.invoke(question)
         # doc = compressed_docs[0]
@@ -60,18 +68,25 @@ class Retriever():
         # department = doc.metadata['department']
 
         return compressed_docs
+
     def get_wiki_content(self, file: dict) -> str:
         """
-        The function `get_wiki_content` reads HTML content from a file, extracts specific div elements,
+        The function `get_wiki_content` reads HTML content from a file,
+        extracts specific div elements,
         adds a title, and returns the text content.
-        
-        :param file: The `file` parameter is expected to be a dictionary containing information about
+
+        :param file: The `file` parameter is expected to be a dictionary
+        containing information about
         the file to be processed. It should have at least two keys:
         :type file: dict
-        :return: The function `get_wiki_content` returns the content of a specific HTML element (div)
-        from a file specified in the input dictionary. It first reads the HTML content from the file,
-        then uses BeautifulSoup to parse the HTML. It looks for a div element with class 'wiki-content',
-        and if not found, it looks for a div element with class 'qa-info qa-info-detail'. Finally,
+        :return: The function `get_wiki_content` returns the content of a
+        specific HTML element (div)
+        from a file specified in the input dictionary. It first reads the HTML
+        content from the file,
+        then uses BeautifulSoup to parse the HTML. It looks for a div element
+        with class 'wiki-content',
+        and if not found, it looks for a div element with class 'qa-info
+        qa-info-detail'. Finally,
         """
         with open(file['source'], 'r', encoding='utf-8') as f:
             html_content = f.read()
@@ -85,7 +100,8 @@ class Retriever():
 
     def create_docs(self) -> list[Document]:
         """
-        The function `create_docs` generates a list of `Document` objects by extracting content from
+        The function `create_docs` generates a list of `Document` objects by
+        extracting content from
         HTML files in a dataset.
         :return: A list of Document objects is being returned.
         """
@@ -99,9 +115,11 @@ class Retriever():
 
     def create_vectorstore(self) -> Chroma:
         """
-        The function `create_vectorstore` deletes the old vectorstore if it exists and then creates a
+        The function `create_vectorstore` deletes the old vectorstore if it
+        exists and then creates a
         new vectorstore using Chroma from the provided documents and embedding.
-        :return: The `create_vectorstore` method returns a `Chroma` object, which is created using the
+        :return: The `create_vectorstore` method returns a `Chroma` object,
+        which is created using the
         `Chroma.from_documents` method with the specified parameters.
         """
         start_time = time.time()
@@ -125,10 +143,13 @@ class Retriever():
 
     def create_pipeline_compressor(self) -> DocumentCompressorPipeline:
         """
-        The function `create_pipeline_compressor` creates a document compressor pipeline with text
+        The function `create_pipeline_compressor` creates a document
+        compressor pipeline with text
         splitting, redundant filtering, and relevant filtering transformers.
-        :return: The `create_pipeline_compressor` method returns a `DocumentCompressorPipeline` object
-        that consists of a pipeline with three transformers: `RecursiveCharacterTextSplitter`,
+        :return: The `create_pipeline_compressor` method returns a
+        `DocumentCompressorPipeline` object
+        that consists of a pipeline with three transformers:
+        `RecursiveCharacterTextSplitter`,
         `EmbeddingsRedundantFilter`, and `EmbeddingsFilter`.
         """
         splitter = RecursiveCharacterTextSplitter(
@@ -148,7 +169,8 @@ class Retriever():
 
     def create_retriever(self) -> ContextualCompressionRetriever:
         """
-        The function `create_retriever` returns a `ContextualCompressionRetriever` object with specified
+        The function `create_retriever` returns a
+        `ContextualCompressionRetriever` object with specified
         base compressor and retriever.
         :return: The `create_retriever` method returns an instance of the
         `ContextualCompressionRetriever` class.

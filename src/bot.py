@@ -1,26 +1,35 @@
 import telebot
 from dotenv import load_dotenv
 import os
-from retriever import Retriever
-from data_loader import DataLoader
+from src.retriever import Retriever
+from src.data_loader import DataLoader
 
 
 load_dotenv()
-
-
-data = DataLoader(zip_path='D:\GitHub\doc-qa\data\data.zip',
-                  extract_dir='D:\GitHub\doc-qa\data\extracted')
-
-Retriever = Retriever(dataset=data)
-
 # Токен телеграм бота
 TOKEN = os.getenv("TOKEN")
 
+# Пути к файлам
+ZIP_PATH = os.getenv("ZIP_PATH")
+EXTRACT_DIR = os.getenv("EXTRACT_DIR")
+
+# Загружаем данные
+data = DataLoader(ZIP_PATH, EXTRACT_DIR)
+
+# Инициализируем Retriever
+retriever = Retriever(dataset=data)
+
+
 # Создаем экземпляр бота
 bot = telebot.TeleBot(TOKEN)
- 
-# Текстовый обработчик
 
+
+# Функция для печати документов
+def pretty_print_docs(docs) -> str:
+    text = "\n".join([f"Document {i+1}:\n\n" + d.page_content for i, d in enumerate(docs)])
+    return text
+
+# Текстовый обработчик
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
     if message.text == "Привет":
@@ -29,12 +38,10 @@ def get_text_messages(message):
     elif message.text == "/help":
         bot.send_message(message.from_user.id,
                          "Напиши любой запрос к базе данных документов ПЭК.")
-    else:                   # добавить функцию обработки запроса к langchain
-        docs = Retriever.answer(question=message.text)
-        for doc in docs:
-            bot.send_message(message.from_user.id, doc.page_content)
-            bot.send_message(message.from_user.id, doc.metadata['url'])
-            bot.send_message(message.from_user.id, doc.metadata['department'])
+    else:
+        docs = retriever.answer(question=message.text)
+        text = pretty_print_docs(docs)
+        bot.send_message(message.from_user.id, text)
 
 
 # Запускаем бота
