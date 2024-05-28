@@ -17,4 +17,7 @@ COPY . .
 RUN chmod +x start_bot.sh
 
 
-CMD ["./start_bot.sh"]
+VOLUME /app/data
+
+
+CMD ["python3 -m src.bot"]

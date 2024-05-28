@@ -24,10 +24,11 @@ retriever = Retriever(dataset=data)
 bot = telebot.TeleBot(TOKEN)
 
 
-# Функция для печати документов
-def pretty_print_docs(docs) -> str:
-    text = "\n".join([f"Document {i+1}:\n\n" + d.page_content for i, d in enumerate(docs)])
-    return text
+# Функция для преобразования словаря в строку
+def dict_to_str(dict) -> str:
+    items = [f"{key}: {value}" for key, value in dict.items()]
+    result = "\n".join(items)
+    return result
 
 # Текстовый обработчик
 @bot.message_handler(content_types=['text'])
@@ -39,8 +40,8 @@ def get_text_messages(message):
         bot.send_message(message.from_user.id,
                          "Напиши любой запрос к базе данных документов ПЭК.")
     else:
-        docs = retriever.answer(question=message.text)
-        text = pretty_print_docs(docs)
+        doc = retriever.answer(question=message.text)
+        text = dict_to_str(doc)
         bot.send_message(message.from_user.id, text)
 
 
