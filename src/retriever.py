@@ -7,7 +7,7 @@ from langchain_core.documents.base import Document
 from langchain_community.embeddings.sentence_transformer import (
     SentenceTransformerEmbeddings
 )
-from langchain.vectorstores import Chroma
+from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_transformers import EmbeddingsRedundantFilter
 from langchain.retrievers.document_compressors import (
