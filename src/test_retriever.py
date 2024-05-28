@@ -1,9 +1,20 @@
 import nltk
 import re
 from tqdm import tqdm
+import argparse
 
 from src.data_loader import DataLoader
 from src.retriever import Retriever
+
+# Arguments
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    '-s',
+    '--show_results',
+    action='store_true',
+    help="Outputs all results"
+)
+args = parser.parse_args()
 
 # Init data and retriever
 dataset = DataLoader()
@@ -52,7 +63,7 @@ for url in urls:
 pred_answers = []
 pred_urls = []
 print("Making predictions...")
-pred_count = 0
+no_pred_count = 0
 for question in tqdm(questions):
     answer_dict = retriever.answer(question)
     if answer_dict is None:
@@ -61,11 +72,20 @@ for question in tqdm(questions):
         no_pred_count += 1
     pred_answers.append(answer_dict['text'])
     pred_urls.append(answer_dict['full_html_name'].split('/')[-1])
-print(f"Predicted {pred_count} out of {len(questions)} questions.")
+print(
+    f"Predicted {len(questions) - no_pred_count}",
+    f"out of {len(questions)} questions."
+)
+
+# Init metric list for `test_avg_levenshtein`
+metrics = []
 
 
 def test_avg_levenshtein() -> None:
-    metrics = []
+    """
+    Calculates average normalized Levenshtein distance
+    for true and predicted answers.
+    """
     for true, pred in zip(answers, pred_answers):
         levenshtein = nltk.edit_distance(true, pred)
         # Normalize by dividing by the length of the longer string
@@ -73,20 +93,39 @@ def test_avg_levenshtein() -> None:
         metrics.append(normalized_levenshtein)
     avg_levenshtein = sum(metrics) / len(metrics)
     print(
-        "Average levenshtein distance (lower better):",
+        "Average levenshtein distance from 0 to 1 (lower is better):",
         f"{avg_levenshtein:.2f}"
     )
     assert 1 == 1
 
 
 def test_urls():
+    """Counts predicted urls."""
     right_urls = []
     for true, pred in zip(urls, pred_urls):
         right_urls.append(true == pred)
-    print(f"Correct {sum(right_urls)} from {len(questions)} urls.")
+    print(f"Correct {sum(right_urls)}/{len(questions)} urls.")
     assert sum(right_urls) > 1
 
 
 if __name__ == '__main__':
     test_avg_levenshtein()
     test_urls()
+
+    # Show predictions
+    if args.show_results:
+        for question, ans, pred_ans, url, pred_url, metric in zip(
+            questions, answers, pred_answers, urls, pred_urls, metrics
+        ):
+            print("Question:")
+            print(question)
+            print("Answer:")
+            print(ans)
+            print("Prediction:")
+            print(pred_ans)
+            print(f"Metric (lower is better): {metric:.3f}")
+            print("URL:")
+            print(url)
+            print("Prediction URL:")
+            print(pred_url)
+            print("*" * 80 + "\n")
