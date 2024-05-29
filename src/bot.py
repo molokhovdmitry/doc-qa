@@ -44,7 +44,10 @@ def get_text_messages(message):
     else:
         answer_dict = retriever.answer(question=message.text)
         if answer_dict is None:
-            bot.send_message(message.from_user.id, "Не получилось найти ответ.")
+            bot.send_message(
+                message.from_user.id,
+                "Не получилось найти ответ."
+            )
         else:
             answer_message = answer_to_message(answer_dict)
             bot.send_message(
