@@ -54,3 +54,19 @@ Where `file` is a `Dict`:
     'url': 'url'
 }
 ```
+
+# `test_retriever`
+Tests for `retriever`. Outputs average normalized Levenshtein distance and counts correctly predicted urls.
+
+Launch with:
+```
+python -m src.test_retriever
+```
+or
+```
+python -m src.test_retriever --show_results
+```
+or
+```
+python -m pytest -s
+```

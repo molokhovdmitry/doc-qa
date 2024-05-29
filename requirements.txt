@@ -2,6 +2,9 @@ tqdm
 chardet
 numpy
 telebot
+nltk
+pandas
+python-dotenv
 
 # LangChain
 langchain
