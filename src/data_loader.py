@@ -1,5 +1,6 @@
 import os
 import zipfile
+import pickle
 import chardet
 from difflib import get_close_matches
 from tqdm import tqdm
@@ -19,11 +20,10 @@ class DataLoader():
         self.html_to_txt_name = {}
         self.html_to_url = {}
 
-        # This part of the code is iterating over the files in the zip archive
-        # (`self.zip_file.filelist`), extracting each file, changing its
-        # filename, and saving the
-        # mapping of the original filename to the new filename in the
-        # `html_to_file` dictionary.
+        """
+        Extract files from zip archive with new filenames and
+        map new filenames to old filenames.
+        """
         for i, f in enumerate(self.zip_file.filelist):
             # Get extension and create new filename
             ext = '.' + f.filename.split('.')[-1]
@@ -36,76 +36,62 @@ class DataLoader():
             f.filename = filename
             self.zip_file.extract(f, path=self.extract_dir)
 
-        # This part of the code is iterating over the values in the
-        # `html_to_file` dictionary, which
-        # contains mappings of original HTML file names to new file names
-        # after extraction.
+        """
+        Read txt files that map html file names to urls and create a mapping.
+        These html file names are not the same as actual filenames.
+        """
         for file in self.html_to_file.values():
             if file.split('.')[-1] == 'txt':
                 file_path = os.path.join(self.extract_dir, file)
                 self.txt_name_to_url.update(self.txt_to_dict(file_path))
 
-        # This part of the code is iterating over the keys in the
-        # `html_to_file` dictionary, which
-        # contains mappings of original HTML file names to new file names
-        # after extraction.
+        # Load only html files from `html_to_file`
         htmls = []
         for file in self.html_to_file.keys():
             if file.split('.')[-1] == 'html':
                 htmls.append(file)
 
-        # This part of the code is comparing the names of HTML files extracted
-        # from a zip archive to
-        # the names extracted from corresponding TXT files. Here's a breakdown
-        # of what it does:
-        print("Comparing html names to names from txt files...")
-        for html in tqdm(htmls):
-            # Get name without extension and department name
-            name = html.split('/')[-1][:-5]
-            # Find closest matches from txt
-            matches = get_close_matches(
-                name,
-                self.txt_name_to_url,
-                n=1,
-                cutoff=0.35
-            )
-            # Raise an error if no matches for html
-            try:
-                assert len(matches) > 0
-            except AssertionError as e:
-                print(f"Did not find a match for {name}.\
-                       Try lowering the cutoff value.")
-                raise e
-            # Add best match to `html_to_txt_name`
-            self.html_to_txt_name[html] = matches[0]
+        """
+        Compare html names to html names from txt files with difflib
+        and create `html_to_txt_name` mapping. If the mapping already exists
+        then load from file.
+        """
+        html_to_url_path = os.path.join(self.extract_dir, 'html_to_url.pkl')
+        if os.path.exists(html_to_url_path):
+            with open(html_to_url_path, 'rb') as f:
+                self.html_to_url = pickle.load(f)
+        else:
+            print("Comparing html names to names from txt files...")
+            for html in tqdm(htmls):
+                # Get name without extension and department name
+                name = html.split('/')[-1][:-5]
+                # Find closest matches from txt
+                matches = get_close_matches(
+                    name,
+                    self.txt_name_to_url,
+                    n=1,
+                    cutoff=0.35
+                )
+                # Raise an error if no matches for html
+                try:
+                    assert len(matches) > 0
+                except AssertionError as e:
+                    print(f"Did not find a match for {name}.\
+                        Try lowering the cutoff value.")
+                    raise e
+                # Add best match to `html_to_txt_name`
+                self.html_to_txt_name[html] = matches[0]
 
-        # This part of the code is filling the `html_to_url` dictionary by
-        # iterating over the items in
-        # the `html_to_txt_name` dictionary. For each HTML file name (`html`)
-        # and its corresponding
-        # TXT file name (`txt_name`), it retrieves the URL associated with the
-        # TXT file name from the
-        # `txt_name_to_url` dictionary. It then adds an entry to the
-        # `html_to_url` dictionary where
-        # the key is the HTML file name and the value is the URL obtained from
-        # the TXT file name. This
-        # process essentially creates a mapping between HTML file names and
-        # their corresponding URLs
-        # based on the TXT file names.
-        # Fill `html_to_url`
-        for html, txt_name in self.html_to_txt_name.items():
-            url = self.txt_name_to_url[txt_name]
-            self.html_to_url[html] = url
+            # Create mapping from actual html name to url from txt files
+            for html, txt_name in self.html_to_txt_name.items():
+                url = self.txt_name_to_url[txt_name]
+                self.html_to_url[html] = url
 
-        # This part of the code is populating the `files` list within the
-        # `DataLoader` class. It
-        # iterates over the items in the `html_to_url` dictionary, which
-        # contains mappings of HTML
-        # file names to their corresponding URLs. For each HTML file name
-        # (`html`) and its associated
-        # URL (`url`), it creates a dictionary `data` with the following
-        # key-value pairs:
-        # Fill `files`
+            # Save `html_to_url` mapping
+            with open(html_to_url_path, 'wb') as f:
+                pickle.dump(self.html_to_url, f)
+
+        # Fill `files` that will contain all required metadata for every html
         for html, url in self.html_to_url.items():
             data = {
                 'source': os.path.join(
@@ -141,8 +127,10 @@ class DataLoader():
         result = {}
         separator = ';http://'
 
-        # Try detecting txt encoding. If did not detect the encoding,
-        # try using `cp1251`
+        """
+        Try detecting txt encoding. If did not detect the encoding,
+        try using `cp1251`
+        """
         detected_encoding = self.get_txt_encoding(txt_path)
         if not detected_encoding:
             encoding = 'cp1251'

@@ -1,5 +1,4 @@
 import os
-import shutil
 from tqdm import tqdm
 from bs4 import BeautifulSoup
 
@@ -28,14 +27,15 @@ class Retriever():
             retriever_search_type: str = 'mmr'
             ) -> None:
         self.dataset = dataset
-        self.docs = self.create_docs()
+        self.vectorstore_dir = vectorstore_dir
+        self.similarity_threshold = similarity_threshold
+        self.retriever_search_type = retriever_search_type
         self.embedding = SentenceTransformerEmbeddings(
             model_name=embedding_model
         )
-        self.vectorstore_dir = vectorstore_dir
+        if not os.path.exists(self.vectorstore_dir):
+            self.docs = self.create_docs()
         self.vectorstore = self.create_vectorstore()
-        self.similarity_threshold = similarity_threshold
-        self.retriever_search_type = retriever_search_type
         self.pipeline_compressor = self.create_pipeline_compressor()
         self.retriever = self.create_retriever()
 
@@ -79,18 +79,22 @@ class Retriever():
         return docs
 
     def create_vectorstore(self) -> Chroma:
-        # Remove old vectorstore if it exists
+        """Loads or creates a vectorstore."""
         if os.path.exists(self.vectorstore_dir):
-            shutil.rmtree(self.vectorstore_dir)
-            print("Old vectorstore has been deleted.")
-
-        # Create vectorstore
-        print("Creating a vectorstore...")
-        vectordb = Chroma.from_documents(
-            documents=self.docs,
-            embedding=self.embedding,
-            persist_directory=self.vectorstore_dir
-        )
+            # Load vectorstore if it exists
+            vectordb = Chroma(
+                persist_directory=self.vectorstore_dir,
+                embedding_function=self.embedding
+            )
+            print(f"Loaded vectorstore from {self.vectorstore_dir}.")
+        else:
+            # Create vectorstore
+            print("Creating a vectorstore...")
+            vectordb = Chroma.from_documents(
+                documents=self.docs,
+                embedding=self.embedding,
+                persist_directory=self.vectorstore_dir
+            )
         return vectordb
 
     def create_pipeline_compressor(self) -> DocumentCompressorPipeline:

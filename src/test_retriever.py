@@ -70,8 +70,9 @@ for question in tqdm(questions):
         pred_answers.append(None)
         pred_urls.append(None)
         no_pred_count += 1
-    pred_answers.append(answer_dict['text'])
-    pred_urls.append(answer_dict['full_html_name'].split('/')[-1])
+    else:
+        pred_answers.append(answer_dict['text'])
+        pred_urls.append(answer_dict['full_html_name'].split('/')[-1])
 print(
     f"Predicted {len(questions) - no_pred_count}",
     f"out of {len(questions)} questions."
@@ -96,7 +97,7 @@ def test_avg_levenshtein() -> None:
         "Average levenshtein distance from 0 to 1 (lower is better):",
         f"{avg_levenshtein:.2f}"
     )
-    assert 1 == 1
+    assert avg_levenshtein < 0.8
 
 
 def test_urls():
@@ -105,7 +106,7 @@ def test_urls():
     for true, pred in zip(urls, pred_urls):
         right_urls.append(true == pred)
     print(f"Correct {sum(right_urls)}/{len(questions)} urls.")
-    assert sum(right_urls) > 1
+    assert sum(right_urls) >= 4
 
 
 if __name__ == '__main__':

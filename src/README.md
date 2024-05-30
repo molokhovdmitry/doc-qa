@@ -23,6 +23,7 @@ answer = retriever.answer(question)
     'department': 'department'
 }
 ```
+To reset the vectorstore delete `chroma` directory.
 
 # `data_loader`
 
