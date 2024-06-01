@@ -3,7 +3,6 @@ import re
 from tqdm import tqdm
 import argparse
 
-from src.data_loader import DataLoader
 from src.retriever import Retriever
 
 # Arguments
@@ -17,8 +16,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 # Init data and retriever
-dataset = DataLoader()
-retriever = Retriever(dataset)
+retriever = Retriever()
 
 # Load questions
 questions_path = 'data/questions.txt'

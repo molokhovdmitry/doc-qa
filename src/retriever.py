@@ -1,6 +1,7 @@
 import os
 from tqdm import tqdm
 from bs4 import BeautifulSoup
+import zipfile
 
 from langchain_core.documents.base import Document
 from langchain_community.embeddings.sentence_transformer import (
@@ -14,27 +15,23 @@ from langchain.retrievers.document_compressors import (
 )
 from langchain.retrievers import ContextualCompressionRetriever
 
-from src.data_loader import DataLoader
-
 
 class Retriever():
     def __init__(
             self,
-            dataset: DataLoader,
+            zip_path: str = 'data/data.zip',
             embedding_model: str = 'cointegrated/LaBSE-en-ru',
             vectorstore_dir: str = 'chroma',
             similarity_threshold: float = 0.25,
             retriever_search_type: str = 'mmr'
             ) -> None:
-        self.dataset = dataset
+        self.zip_path = zip_path
         self.vectorstore_dir = vectorstore_dir
         self.similarity_threshold = similarity_threshold
         self.retriever_search_type = retriever_search_type
         self.embedding = SentenceTransformerEmbeddings(
             model_name=embedding_model
         )
-        if not os.path.exists(self.vectorstore_dir):
-            self.docs = self.create_docs()
         self.vectorstore = self.create_vectorstore()
         self.pipeline_compressor = self.create_pipeline_compressor()
         self.retriever = self.create_retriever()
@@ -58,24 +55,44 @@ class Retriever():
 
         return answer
 
-    def get_wiki_content(self, file: dict) -> str:
-        with open(file['source'], 'r') as f:
-            html_content = f.read()
+    def get_wiki_content(self, html_content: str) -> str:
+        """Returns wiki content from html content."""
         soup = BeautifulSoup(html_content, 'html.parser')
         div = soup.find('div', class_='wiki-content')
         if not div:
             div = soup.find('div', class_='qa-info qa-info-detail')
+        return div.get_text()
 
-        # Add title and return content
-        return file['name'] + '\n' + div.get_text()
+    def get_confluence_url(self, html_content: str) -> str:
+        """Returns a confluence url from html file content."""
+        soup = BeautifulSoup(html_content, 'html.parser')
+        link_element = soup.find('link', rel='canonical')
+        if not link_element:
+            return None
+        url = link_element['href']
+        return url
 
-    def create_docs(self) -> list[Document]:
+    def create_docs(self, zip_path) -> list[Document]:
+        """Create documents from html files in a zip archive."""
         docs = []
-        print("Creating document corpus from html files...")
-        for file in tqdm(self.dataset):
-            content = self.get_wiki_content(file)
-            doc = Document(page_content=content, metadata=file)
-            docs.append(doc)
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            print("Creating the document corpus from the zip archive...")
+            for filename in tqdm(zip_ref.namelist()):
+                if filename.split('.')[-1] == 'html':
+                    html_content = zip_ref.read(filename).decode()
+                    wiki_content = self.get_wiki_content(html_content)
+                    url = self.get_confluence_url(html_content)
+                    metadata = {
+                        'name': filename.split('/')[-1][:-5],
+                        'full_html_name': filename,
+                        'department': filename.split('/')[0],
+                        'url': url
+                    }
+                    doc = Document(
+                        page_content=wiki_content,
+                        metadata=metadata
+                    )
+                    docs.append(doc)
         return docs
 
     def create_vectorstore(self) -> Chroma:
@@ -86,16 +103,36 @@ class Retriever():
                 persist_directory=self.vectorstore_dir,
                 embedding_function=self.embedding
             )
-            print(f"Loaded vectorstore from {self.vectorstore_dir}.")
+            doc_count = vectordb._collection.count()
+            print(
+                f"Loaded vectorstore from {self.vectorstore_dir}",
+                f"with {doc_count} documents."
+            )
         else:
+            docs = self.create_docs(self.zip_path)
             # Create vectorstore
-            print("Creating a vectorstore...")
+            print("Creating the vectorstore...")
             vectordb = Chroma.from_documents(
-                documents=self.docs,
+                documents=docs,
                 embedding=self.embedding,
                 persist_directory=self.vectorstore_dir
             )
+            doc_count = vectordb._collection.count()
+            print(
+                f"Created vectorstore in {self.vectorstore_dir}",
+                f"with {doc_count} documents."
+            )
         return vectordb
+
+    def add_documents(self, zip_path: str) -> None:
+        """Updates the vectorstore with new documents from a zip archive."""
+        doc_count = self.vectorstore._collection.count()
+        print(f"Current document count: {doc_count}")
+        docs = self.create_docs(zip_path)
+        print("Adding documents to the vectorstore...")
+        self.vectorstore.add_documents(docs)
+        doc_count = self.vectorstore._collection.count()
+        print(f"Documents added. New document count: {doc_count}")
 
     def create_pipeline_compressor(self) -> DocumentCompressorPipeline:
         splitter = RecursiveCharacterTextSplitter(

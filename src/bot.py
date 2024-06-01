@@ -2,21 +2,16 @@ import telebot
 from dotenv import load_dotenv
 import os
 from src.retriever import Retriever
-from src.data_loader import DataLoader
 
 load_dotenv()
 # Токен телеграм бота
 TOKEN = os.getenv("TOKEN")
 
-# Пути к файлам
+# Путь к архиву с данными
 ZIP_PATH = os.getenv("ZIP_PATH")
-EXTRACT_DIR = os.getenv("EXTRACT_DIR")
-
-# Загружаем данные
-data = DataLoader(ZIP_PATH, EXTRACT_DIR)
 
 # Инициализируем Retriever
-retriever = Retriever(dataset=data)
+retriever = Retriever(ZIP_PATH)
 
 # Создаем экземпляр бота
 bot = telebot.TeleBot(TOKEN)
