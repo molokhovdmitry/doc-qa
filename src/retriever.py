@@ -9,11 +9,12 @@ from langchain_community.embeddings.sentence_transformer import (
 )
 from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_transformers import EmbeddingsRedundantFilter
 from langchain.retrievers.document_compressors import (
     DocumentCompressorPipeline, EmbeddingsFilter
 )
 from langchain.retrievers import ContextualCompressionRetriever
+
+from langchain_text_splitters.spacy import SpacyTextSplitter
 
 
 class Retriever():
@@ -22,21 +23,23 @@ class Retriever():
             zip_path: str = 'data/data.zip',
             embedding_model: str = 'cointegrated/LaBSE-en-ru',
             vectorstore_dir: str = 'chroma',
-            similarity_threshold: float = 0.25,
+            similarity_threshold: float = 0.4,
             retriever_search_type: str = 'mmr'
             ) -> None:
         self.zip_path = zip_path
         self.vectorstore_dir = vectorstore_dir
-        self.similarity_threshold = similarity_threshold
         self.retriever_search_type = retriever_search_type
         self.embedding = SentenceTransformerEmbeddings(
             model_name=embedding_model
         )
         self.vectorstore = self.create_vectorstore()
+        self.similarity_threshold = similarity_threshold
+        # Pipeline to compress retrieved document splits
         self.pipeline_compressor = self.create_pipeline_compressor()
         self.retriever = self.create_retriever()
 
     def answer(self, question: str) -> dict:
+        """Returns an answer dictionary to the question."""
         compressed_docs = self.retriever.invoke(question)
         if len(compressed_docs) == 0:
             return None
@@ -45,14 +48,12 @@ class Retriever():
         url = doc.metadata['url']
         full_html_name = doc.metadata['full_html_name']
         department = doc.metadata['department']
-
         answer = {
             'text': text,
             'url': url,
             'full_html_name': full_html_name,
             'department': department
         }
-
         return answer
 
     def get_wiki_content(self, html_content: str) -> str:
@@ -61,7 +62,8 @@ class Retriever():
         div = soup.find('div', class_='wiki-content')
         if not div:
             div = soup.find('div', class_='qa-info qa-info-detail')
-        return div.get_text()
+        wiki_content = div.get_text('\n', strip=True)
+        return wiki_content
 
     def get_confluence_url(self, html_content: str) -> str:
         """Returns a confluence url from html file content."""
@@ -74,16 +76,18 @@ class Retriever():
 
     def create_docs(self, zip_path) -> list[Document]:
         """Create documents from html files in a zip archive."""
-        docs = []
+        raw_docs = []
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             print("Creating the document corpus from the zip archive...")
             for filename in tqdm(zip_ref.namelist()):
                 if filename.split('.')[-1] == 'html':
+                    name = filename.split('/')[-1][:-5]
                     html_content = zip_ref.read(filename).decode()
                     wiki_content = self.get_wiki_content(html_content)
+                    wiki_content = name + wiki_content
                     url = self.get_confluence_url(html_content)
                     metadata = {
-                        'name': filename.split('/')[-1][:-5],
+                        'name': name,
                         'full_html_name': filename,
                         'department': filename.split('/')[0],
                         'url': url
@@ -92,7 +96,16 @@ class Retriever():
                         page_content=wiki_content,
                         metadata=metadata
                     )
-                    docs.append(doc)
+                    raw_docs.append(doc)
+
+        # Split the documents into chunks
+        doc_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1500,
+            chunk_overlap=500,
+            separators=["\n\n", "\n", "(?<=\. )", " "]
+        )
+        print("Splitting the documents into chunks...")
+        docs = doc_splitter.split_documents(raw_docs)
         return docs
 
     def create_vectorstore(self) -> Chroma:
@@ -106,12 +119,12 @@ class Retriever():
             doc_count = vectordb._collection.count()
             print(
                 f"Loaded vectorstore from {self.vectorstore_dir}",
-                f"with {doc_count} documents."
+                f"with {doc_count} document splits."
             )
         else:
             docs = self.create_docs(self.zip_path)
             # Create vectorstore
-            print("Creating the vectorstore...")
+            print("Creating a vectorstore...")
             vectordb = Chroma.from_documents(
                 documents=docs,
                 embedding=self.embedding,
@@ -119,41 +132,51 @@ class Retriever():
             )
             doc_count = vectordb._collection.count()
             print(
-                f"Created vectorstore in {self.vectorstore_dir}",
-                f"with {doc_count} documents."
+                f"Created a vectorstore in `{self.vectorstore_dir}`",
+                f"with {doc_count} document splits."
             )
         return vectordb
 
     def add_documents(self, zip_path: str) -> None:
         """Updates the vectorstore with new documents from a zip archive."""
         doc_count = self.vectorstore._collection.count()
-        print(f"Current document count: {doc_count}")
+        print(f"Current document split count: {doc_count}")
         docs = self.create_docs(zip_path)
         print("Adding documents to the vectorstore...")
         self.vectorstore.add_documents(docs)
         doc_count = self.vectorstore._collection.count()
-        print(f"Documents added. New document count: {doc_count}")
+        print(f"Documents added. New document split count: {doc_count}")
 
     def create_pipeline_compressor(self) -> DocumentCompressorPipeline:
-        splitter = RecursiveCharacterTextSplitter(
-            # chunk_size=300,
-            chunk_overlap=0,
-            separators=['\n\n', '\n', '. ']
+        """
+        Create a compressor pipeline to split and filter
+        retrieved document splits.
+        """
+        chunk_splitter = SpacyTextSplitter(
+            pipeline='ru_core_news_lg',
+            separator='\n',
+            chunk_size=1000
         )
-        redundant_filter = EmbeddingsRedundantFilter(embeddings=self.embedding)
         relevant_filter = EmbeddingsFilter(
             embeddings=self.embedding,
             similarity_threshold=self.similarity_threshold
         )
+
         pipeline_compressor = DocumentCompressorPipeline(
-            transformers=[splitter, redundant_filter, relevant_filter]
+            transformers=[chunk_splitter, relevant_filter]
         )
         return pipeline_compressor
 
     def create_retriever(self) -> ContextualCompressionRetriever:
+        """Create a vectorstore retriever that will answer questions."""
         compression_retriever = ContextualCompressionRetriever(
             base_compressor=self.pipeline_compressor,
             base_retriever=self.vectorstore.as_retriever(
-                search_type=self.retriever_search_type)
+                search_type=self.retriever_search_type,
+                search_kwargs={
+                    'fetch_k': 50,
+                    'k': 30,
+                    'lambda_mult': 0.25}
+            )
         )
         return compression_retriever
