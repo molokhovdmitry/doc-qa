@@ -2,6 +2,7 @@ import telebot
 from dotenv import load_dotenv
 import os
 from src.retriever import Retriever
+import re
 
 load_dotenv()
 # Токен телеграм бота
@@ -15,6 +16,8 @@ retriever = Retriever(ZIP_PATH)
 
 # Создаем экземпляр бота
 bot = telebot.TeleBot(TOKEN)
+
+pattern = "^[A-Za-zА-Яа-я0-9_]+\.zip$"
 
 
 # Функция для преобразования словаря в строку
@@ -36,6 +39,16 @@ def get_text_messages(message):
     elif message.text == "/help":
         bot.send_message(message.from_user.id,
                          "Напиши любой запрос к базе данных документов ПЭК.")
+        bot.send_message(message.from_user.id,
+                         "Напиши /add_doc для обновления базы данных документов")
+    elif message.text == "/add_doc":
+        bot.send_message(message.from_user.id,
+                         "Напиши имя файла в формате filename.zip")
+        if re.match(pattern, message.text):
+            retriever.add_doc(f"data/{message.text}")
+            bot.send_message(message.from_user.id, "База данных обновлена")
+        else:
+            bot.send_message(message.from_user.id, "Неверное имя файла")
     else:
         answer_dict = retriever.answer(question=message.text)
         if answer_dict is None:
