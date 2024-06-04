@@ -1,6 +1,7 @@
 tqdm
 numpy
 telebot
+python-telegram-bot[all]
 nltk
 pandas
 python-dotenv
