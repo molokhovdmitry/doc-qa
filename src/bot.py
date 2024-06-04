@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from src.retriever import Retriever
+from retriever import Retriever
 import telebot
 import os
 import re
@@ -22,7 +22,7 @@ retriever = Retriever(ZIP_PATH)
 # Создаем экземпляр бота
 bot = telebot.TeleBot(TOKEN)
 
-pattern = "^[A-Za-zА-Яа-я0-9_]+\.zip$"
+pattern = "^[A-Za-zА-Яа-я0-9_]+.zip$"
 
 
 # Функция для проверки наличия файлов авторизации и создания их,
