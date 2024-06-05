@@ -4,9 +4,7 @@ from bs4 import BeautifulSoup
 import zipfile
 
 from langchain_core.documents.base import Document
-from langchain_community.embeddings.sentence_transformer import (
-    SentenceTransformerEmbeddings
-)
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.retrievers.document_compressors import (
@@ -27,7 +25,7 @@ class Retriever():
         self.zip_path = zip_path
         self.vectorstore_dir = vectorstore_dir
         self.retriever_search_type = retriever_search_type
-        self.embedding = SentenceTransformerEmbeddings(
+        self.embedding = HuggingFaceEmbeddings(
             model_name=embedding_model
         )
         self.vectorstore = self.create_vectorstore()

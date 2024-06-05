@@ -9,6 +9,7 @@ python-dotenv
 # LangChain
 langchain
 langchain_community
+langchain_huggingface
 chromadb
 beautifulsoup4
 torch
