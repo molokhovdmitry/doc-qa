@@ -12,7 +12,7 @@
 2. Из полученных документов создаются фрагменты документов с помощью одного из 
 [Text Splitters](https://python.langchain.com/v0.1/docs/modules/data_connection/document_transformers), в нашем случае [`RecursiveCharacterTextSplitter`](https://api.python.langchain.com/en/latest/character/langchain_text_splitters.character.RecursiveCharacterTextSplitter.html).
 3. Из фрагментов текстов с помощью модели векторного представления [`cointegrated/LaBSE-en-ru`](https://huggingface.co/cointegrated/LaBSE-en-ru) создаётся [векторное хранилище](https://python.langchain.com/v0.1/docs/modules/data_connection/vectorstores) `Chroma`.
-4. По методу `Maximal Marginal Relevance` находятся топ `k` похожих на заданный вопрос фрагментов, после чего эти фрагменты обрабатываются [`DocumentCompressorPipeline`](https://api.python.langchain.com/en/latest/retrievers/langchain.retrievers.document_compressors.base.DocumentCompressorPipeline.html), состоящим из еще одного [`RecursiveCharacterTextSplitter`](https://api.python.langchain.com/en/latest/character/langchain_text_splitters.character.RecursiveCharacterTextSplitter.html) для разбиения фрагментов на еще более мелкие фрагменты, и из [`EmbeddingsFilter`](https://api.python.langchain.com/en/latest/retrievers/langchain.retrievers.document_compressors.embeddings_filter.EmbeddingsFilter.html) для выбора из полученных фрагментов наиболее релевантных.
+4. По методу `Maximal Marginal Relevance` находятся топ `k` похожих на заданный вопрос фрагментов, после чего эти фрагменты обрабатываются [`DocumentCompressorPipeline`](https://api.python.langchain.com/en/latest/retrievers/langchain.retrievers.document_compressors.base.DocumentCompressorPipeline.html), состоящим из еще одного [`RecursiveCharacterTextSplitter`](https://api.python.langchain.com/en/latest/character/langchain_text_splitters.character.RecursiveCharacterTextSplitter.html) и из [`EmbeddingsFilter`](https://api.python.langchain.com/en/latest/retrievers/langchain.retrievers.document_compressors.embeddings_filter.EmbeddingsFilter.html) который выбирает из еще более мелких фрагментов наиболее релевантные.
 
 ### Бот
 В боте реализована простейшая система авторизации и команда для добавления новых документов в векторное хранилище. Для использования необходима роль администратора либо пользователя. Администраторы добавляются вручную в `data/admins.csv`, созданный после запуска бота. Пользователей можно добавить командой `/add_user <telegram_id> <username>`.
@@ -53,6 +53,8 @@ cd doc-qa
 
 Установите зависимости:
 ```
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 

@@ -52,6 +52,8 @@ Rename the `.env.example` file to `.env` and specify the Telegram bot token and 
 
 Install the dependencies:
 ```
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
