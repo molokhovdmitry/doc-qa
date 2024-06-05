@@ -13,4 +13,3 @@ chromadb
 beautifulsoup4
 torch
 sentence_transformers
-spacy

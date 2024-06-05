@@ -1,5 +1,3 @@
-# `bot`
-
 # `retriever`
 
 `Retriever` class usage example:
@@ -39,3 +37,5 @@ or
 ```
 python -m pytest -s
 ```
+
+Best results on PEC data: 0.72 avg Levenshtein and 9/20 correct urls.

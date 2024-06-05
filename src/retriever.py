@@ -14,8 +14,6 @@ from langchain.retrievers.document_compressors import (
 )
 from langchain.retrievers import ContextualCompressionRetriever
 
-from langchain_text_splitters.spacy import SpacyTextSplitter
-
 
 class Retriever():
     def __init__(
@@ -23,7 +21,7 @@ class Retriever():
             zip_path: str = 'data/data.zip',
             embedding_model: str = 'cointegrated/LaBSE-en-ru',
             vectorstore_dir: str = 'chroma',
-            similarity_threshold: float = 0.4,
+            similarity_threshold: float = 0.3,
             retriever_search_type: str = 'mmr'
             ) -> None:
         self.zip_path = zip_path
@@ -100,9 +98,9 @@ class Retriever():
 
         # Split the documents into chunks
         doc_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1500,
-            chunk_overlap=500,
-            separators=["\n\n", "\n", "(?<=\. )", " "]
+            chunk_size=2000,
+            chunk_overlap=100,
+            separators=["\n\n", "\n", r"(?<=\. )", " "]
         )
         print("Splitting the documents into chunks...")
         docs = doc_splitter.split_documents(raw_docs)
@@ -118,7 +116,7 @@ class Retriever():
             )
             doc_count = vectordb._collection.count()
             print(
-                f"Loaded vectorstore from {self.vectorstore_dir}",
+                f"Loaded the vectorstore from /{self.vectorstore_dir}",
                 f"with {doc_count} document splits."
             )
         else:
@@ -152,10 +150,10 @@ class Retriever():
         Create a compressor pipeline to split and filter
         retrieved document splits.
         """
-        chunk_splitter = SpacyTextSplitter(
-            pipeline='ru_core_news_lg',
-            separator='\n',
-            chunk_size=1000
+        chunk_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=100,
+            separators=["\n\n", "\n", r"(?<=\. )", " "]
         )
         relevant_filter = EmbeddingsFilter(
             embeddings=self.embedding,
@@ -169,14 +167,15 @@ class Retriever():
 
     def create_retriever(self) -> ContextualCompressionRetriever:
         """Create a vectorstore retriever that will answer questions."""
+        base_retriever = self.vectorstore.as_retriever(
+            search_type=self.retriever_search_type,
+            search_kwargs={
+                'fetch_k': 20,
+                'k': 15
+            }
+        )
         compression_retriever = ContextualCompressionRetriever(
             base_compressor=self.pipeline_compressor,
-            base_retriever=self.vectorstore.as_retriever(
-                search_type=self.retriever_search_type,
-                search_kwargs={
-                    'fetch_k': 50,
-                    'k': 30,
-                    'lambda_mult': 0.25}
-            )
+            base_retriever=base_retriever
         )
         return compression_retriever

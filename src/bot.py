@@ -1,9 +1,10 @@
 from dotenv import load_dotenv
-from retriever import Retriever
 import telebot
 import os
-import re
 import csv
+
+from src.retriever import Retriever
+
 
 USERS_FILE = 'data/users.csv'
 ADMINS_FILE = 'data/admins.csv'
@@ -22,7 +23,21 @@ retriever = Retriever(ZIP_PATH)
 # Создаем экземпляр бота
 bot = telebot.TeleBot(TOKEN)
 
-pattern = "^[A-Za-zА-Яа-я0-9_]+.zip$"
+help_string = """Введите любой запрос к данным.
+
+# Вывести помощь.
+/help
+
+# Добавить к векторному хранилищу документы из zip архива.
+# Требуются права администратора.
+/add_docs <path/to/file.zip>
+/add_docs data/data.zip
+
+# Добавить пользователя
+# Требуются права администратора.
+/add_user <telegram_id> <username>
+/add_user 6385486588 molokhovdmitry
+"""
 
 
 # Функция для проверки наличия файлов авторизации и создания их,
@@ -74,13 +89,9 @@ def answer_to_message(answer: dict) -> str:
 # Декоратор для обработки команды /help
 @bot.message_handler(commands=['help'])
 def handle_help(message):
-    bot.reply_to(message, "Привет, я телеграм-бот ПЭК,чем могу помочь?")
-    bot.reply_to(
-        message, "Напиши /add_doc для обновления \
-        базы данных документов.")
-    bot.reply_to(
-        message, "Команда: /add_user <telegram_id> <username> - \
-        добавление нового пользователя админом.")
+    bot.send_message(
+        message.from_user.id,
+        help_string)
 
 
 # Декоратор для обработки команды /start
@@ -89,12 +100,17 @@ def handle_start(message):
     user_id = message.from_user.id
     username = message.from_user.username
 
-    if is_user_registered(user_id):
-        bot.reply_to(message, f"Привет {username}, вы успешно авторизованы.")
+    if is_user_registered(user_id) or is_admin_registered(user_id):
+        bot.send_message(
+            user_id,
+            f"Привет {username}, вы успешно авторизованы."
+        )
     else:
-        bot.reply_to(
-            message, f"{username}, обратитесь к администратору \
-            для регистрации.")
+        bot.send_message(
+            user_id,
+            f"{username}, обратитесь к администратору для регистрации.\n" +
+            f"Ваш Telegram ID: {user_id}"
+        )
 
 
 # Декоратор для обработки команды /add_user
@@ -112,8 +128,8 @@ def handle_add_user(message):
             bot.reply_to(message, "Пользователь уже зарегистрирован.")
         else:
             register_user(new_user_id, new_username)
-            bot.reply_to(message, f"Пользователь {
-                         new_username} успешно добавлен.")
+            bot.reply_to(
+                message, f"Пользователь {new_username} успешно добавлен.")
     except ValueError:
         bot.reply_to(
             message, "Неверный формат. Используйте\
@@ -122,21 +138,39 @@ def handle_add_user(message):
         bot.reply_to(message, f"Произошла ошибка: {e}")
 
 
-# Декоратор для обработки команды /add_doc
-@bot.message_handler(commands=['add_doc'])
-def handle_add_doc(message):
-    bot.reply_to(message, "Напиши имя файла в формате filename.zip")
-    if re.match(pattern, message.text):
-        retriever.add_doc(f"data/{message.text}")
-        bot.reply_to(message, "База данных обновлена")
+# Декоратор для обработки команды /add_docs
+@bot.message_handler(commands=['add_docs'])
+def handle_add_docs(message):
+    zip_path = message.text.split()[-1]
+    if not os.path.exists(zip_path):
+        bot.send_message(
+            message.from_user.id,
+            f"Файл {zip_path} не найден."
+        )
+        return
+    if zip_path.split('.')[-1] == 'zip':
+        bot.send_message(
+            message.from_user.id,
+            "Обновляю хранилище..."
+        )
+        retriever.add_documents(zip_path)
+        bot.send_message(
+            message.from_user.id,
+            "Векторное хранилище обновлено."
+        )
     else:
-        bot.reply_to(message, "Неверное имя файла")
+        bot.send_message(
+            message.from_user.id,
+            "Файл не является .zip архивом."
+        )
 
 
 # Текстовый обработчик
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
-    if message.text and is_user_registered(message.from_user.id):
+    user_id = message.from_user.id
+    registered = is_user_registered(user_id) or is_admin_registered(user_id)
+    if message.text and registered:
         answer_dict = retriever.answer(question=message.text)
         if answer_dict is None:
             bot.send_message(
@@ -151,12 +185,13 @@ def get_text_messages(message):
             )
     else:
         bot.send_message(
-            message, "Обратитесь к администратору для регистрации.")
+            message.from_user.id,
+            "Обратитесь к администратору для регистрации."
+        )
 
 
 # Проверяем наличие файлы авторизации
 check_auth_files()
-
 
 # Запускаем бота
 if __name__ == '__main__':
